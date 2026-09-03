@@ -119,14 +119,14 @@ Completá el formulario exactamente así:
 |---|---|
 | **Name** | `agroroute-backend` (dato #4 de la tabla) |
 | **Region** | Oregon (US West) — o la más cercana disponible en el plan gratuito |
-| **Branch** | `main` |
-| **Root Directory** | `agroRoute/backend` ⚠️ **muy importante**, sino Render no va a encontrar el `package.json` correcto |
+| **Branch** | `main` (o `deploy-prep` si todavía no mergearon esta rama) |
+| **Root Directory** | `agroRoute` ⚠️ **muy importante**: es la raíz del proyecto, **NO** `agroRoute/backend`. El `package.json` de la raíz ya tiene el script `postinstall` que instala las dependencias de `backend/` y el script `start` que ejecuta `node backend/src/server.js`. |
 | **Runtime** | `Node` |
 | **Build Command** | `npm install` |
 | **Start Command** | `npm start` |
 | **Instance Type** | `Free` |
 
-> 💡 Si su repositorio tiene la carpeta `agroRoute` en la raíz del repo de GitHub (como en este proyecto), el **Root Directory** debe ser `agroRoute/backend`. Si el repo de GitHub ya apunta directo a la carpeta `agroRoute` (es decir, `backend/` está en la raíz del repo), entonces el Root Directory es simplemente `backend`.
+> 💡 Si su repositorio de GitHub ya apunta directo a la carpeta `agroRoute` (es decir, `backend/` y `package.json` están en la raíz del repo), entonces el Root Directory se deja **vacío** (la raíz del repo). Si en cambio el repo tiene `agroRoute/` como subcarpeta, el Root Directory debe ser `agroRoute`.
 
 ### 3.3 NO hagas click en "Create Web Service" todavía
 Antes bajá a la sección **"Environment Variables"** (o "Advanced") del mismo formulario y agregá las variables de entorno del punto 3.4. Así el primer deploy ya arranca bien configurado.
@@ -291,7 +291,7 @@ Marquen cada ítem antes de considerar el deployment terminado:
 | `database.connected: false` en `/api/health` | `DATABASE_URL` mal copiada o falta `DATABASE_SSL=true` | Volver a copiar la cadena completa de Neon, verificar `sslmode=require` |
 | Error 500 al analizar rutas, mensaje sobre OSRM o Open-Meteo | Servicio externo caído o con rate-limit propio | Esperar unos minutos; el sistema aplica valores de respaldo automáticamente |
 | Vercel build falla con "vite: not found" o similar | Root Directory mal configurado | Verificar que apunte exactamente a la carpeta que contiene `frontend/package.json` |
-| Render build falla con "Cannot find module" | Root Directory mal configurado | Verificar que apunte exactamente a la carpeta que contiene `backend/package.json` |
+| Render build falla con "Cannot find module" | Root Directory mal configurado | Verificar que el Root Directory sea la **raíz del repo** (`agroRoute`, o vacío si el repo ya empieza ahí), NO `agroRoute/backend`. El `package.json` raíz es el que orquesta la instalación de `backend/` vía `postinstall`. |
 
 ---
 

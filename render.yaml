@@ -3,13 +3,16 @@
 # Si prefieren crear el servicio manualmente ("New + -> Web Service"), este
 # archivo puede ignorarse; los mismos valores se completan a mano en la UI
 # siguiendo la guía DEPLOYMENT.md.
+#
+# IMPORTANTE: el Root Directory es la RAÍZ del repositorio (agroRoute/), no
+# "backend/". El package.json raíz define "postinstall" (instala las
+# dependencias de backend/) y "start" (node backend/src/server.js).
 services:
   - type: web
     name: agroroute-backend
     runtime: node
     plan: free
     region: oregon
-    rootDir: backend
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
