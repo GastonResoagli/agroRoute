@@ -1,6 +1,8 @@
 # AgroRoute — Plataforma de Transitabilidad Rural (Corrientes)
 
-> **MVP de Transitabilidad Rural y Gestión de Caminos para Productores Agropecuarios en Corrientes y la Región del Litoral.**
+> **Plataforma inteligente de transitabilidad y evaluación de riesgo en caminos rurales para productores agropecuarios en Corrientes.**
+
+AgroRoute es una aplicación web que evalúa la transitabilidad de caminos rurales y rutas en la provincia de Corrientes. A partir de datos satelitales en tiempo real de humedad de suelo, pronóstico de lluvias y la detección del tipo de calzada (asfalto o tierra), calcula el nivel de riesgo de corte o lodazal para sugerir trayectos seguros para el transporte de producción y hacienda.
 
 ---
 
