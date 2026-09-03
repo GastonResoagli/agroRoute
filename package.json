@@ -2,15 +2,24 @@
   "name": "agroroute-workspace",
   "version": "1.0.0",
   "description": "AgroRoute - Plataforma de Transitabilidad Rural para Productores Agropecuarios en Corrientes",
+  "main": "backend/src/server.js",
   "scripts": {
+    "start": "node backend/src/server.js",
+    "build": "npm --prefix backend install",
+    "postinstall": "npm --prefix backend install",
     "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "build:frontend": "npm --prefix frontend run build",
     "test:backend": "npm --prefix backend run test"
   },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pg": "^8.11.5"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
 }
-

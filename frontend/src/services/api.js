@@ -10,8 +10,8 @@
  * http://localhost:4000.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
+const rawBase = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
 
 export async function analyzeRoutes(payload) {
   const response = await fetch(`${API_BASE}/routes/analyze`, {

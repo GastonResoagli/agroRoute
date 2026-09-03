@@ -1,15 +1,24 @@
 const { Pool } = require('pg');
 const crypto = require('crypto');
 
+// Detección automática de SSL para Render, Neon o producción
+const isSslRequired = process.env.DATABASE_SSL === 'true' ||
+  (process.env.DATABASE_URL && (
+    process.env.DATABASE_URL.includes('render.com') ||
+    process.env.DATABASE_URL.includes('neon.tech') ||
+    process.env.DATABASE_URL.includes('supabase') ||
+    process.env.NODE_ENV === 'production'
+  ));
+
 // Configuración de conexión a PostgreSQL
-// Neon (producción) requiere SSL. Se activa automáticamente si DATABASE_SSL=true
-// o si la cadena de conexión apunta a un host de Neon (*.neon.tech).
+// Neon/Render/Supabase (producción) requieren SSL. Se activa automáticamente si
+// DATABASE_SSL=true, si NODE_ENV=production, o si la cadena de conexión apunta
+// a un host conocido de esos proveedores.
 const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/agroroute';
-const requiresSsl = process.env.DATABASE_SSL === 'true' || connectionString.includes('neon.tech');
 
 const pool = new Pool({
   connectionString,
-  ssl: requiresSsl ? { rejectUnauthorized: false } : false,
+  ssl: isSslRequired ? { rejectUnauthorized: false } : false,
   connectionTimeoutMillis: 5000,
 });
 
