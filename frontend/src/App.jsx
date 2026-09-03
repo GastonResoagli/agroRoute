@@ -5,7 +5,8 @@ import ResultsPanel from './components/ResultsPanel';
 import MapView from './components/MapView';
 import RulesModal from './components/RulesModal';
 import { analyzeRoutes } from './services/api';
-import { Sliders, Map, BarChart3, AlertCircle } from 'lucide-react';
+import { Sliders, Map, BarChart3, AlertCircle, Satellite } from 'lucide-react';
+
 
 export default function App() {
   // Estado de origen y destino centrado en Corrientes
@@ -167,8 +168,22 @@ export default function App() {
         </button>
       </div>
 
+      {/* Aviso permanente: dependencias de servicios externos */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3 w-full">
+        <div className="bg-amber-50 border border-amber-300 text-amber-800 px-3 py-2 rounded-lg flex items-center gap-2 text-[11px] sm:text-xs">
+          <Satellite className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>
+            Este sistema utiliza los servicios externos gratuitos <strong>OSRM</strong> (cálculo de rutas) y{' '}
+            <strong>Open-Meteo</strong> (pronóstico climático). Ambos son de terceros y están sujetos a disponibilidad,
+            latencia y límites de uso fuera de nuestro control. Ante una caída temporal, el sistema aplicará valores de
+            respaldo y podrá mostrar datos aproximados.
+          </span>
+        </div>
+      </div>
+
       {/* Mensaje de error general si ocurre */}
       {error && (
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
           <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded-xl flex items-center gap-2 text-xs">
             <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />

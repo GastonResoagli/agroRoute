@@ -1,0 +1,32 @@
+# Blueprint opcional de Render para AgroRoute Backend
+# Uso: En Render Dashboard -> New + -> Blueprint -> seleccionar este repositorio.
+# Si prefieren crear el servicio manualmente ("New + -> Web Service"), este
+# archivo puede ignorarse; los mismos valores se completan a mano en la UI
+# siguiendo la guía DEPLOYMENT.md.
+services:
+  - type: web
+    name: agroroute-backend
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: CORS_ORIGIN
+        sync: false
+      - key: DEFAULT_USER_ID
+        value: a0000000-0000-0000-0000-000000000001
+      - key: DEFAULT_USER_ROLE
+        value: producer
+      - key: RATE_LIMIT_MAX
+        value: 60

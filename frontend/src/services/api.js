@@ -1,8 +1,17 @@
 /**
  * Cliente de API para el frontend de AgroRoute
+ *
+ * En producción (Vercel) se debe definir la variable de entorno VITE_API_URL
+ * apuntando al backend público de Render, por ejemplo:
+ *   VITE_API_URL=https://agroroute-backend.onrender.com/api
+ *
+ * En desarrollo local, si VITE_API_URL no está definida, se usa la ruta
+ * relativa '/api' que es redirigida por el proxy de vite.config.js hacia
+ * http://localhost:4000.
  */
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
 
 export async function analyzeRoutes(payload) {
   const response = await fetch(`${API_BASE}/routes/analyze`, {

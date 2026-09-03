@@ -2,11 +2,17 @@ const { Pool } = require('pg');
 const crypto = require('crypto');
 
 // Configuración de conexión a PostgreSQL
+// Neon (producción) requiere SSL. Se activa automáticamente si DATABASE_SSL=true
+// o si la cadena de conexión apunta a un host de Neon (*.neon.tech).
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/agroroute';
+const requiresSsl = process.env.DATABASE_SSL === 'true' || connectionString.includes('neon.tech');
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/agroroute',
-  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
-  connectionTimeoutMillis: 2000,
+  connectionString,
+  ssl: requiresSsl ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 5000,
 });
+
 
 // Prevenir caídas no controladas por eventos de desconexión en el pool
 pool.on('error', (err) => {

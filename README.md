@@ -2,6 +2,9 @@
 
 > **MVP de Transitabilidad Rural y Gestión de Caminos para Productores Agropecuarios en Corrientes y la Región del Litoral.**
 
+> 🚀 **¿Quieren publicar esta app con una URL pública en menos de 1 hora?** Sigan la guía paso a paso en [`DEPLOYMENT.md`](./DEPLOYMENT.md) (Vercel + Render + Neon, planes gratuitos).
+
+
 ---
 
 ## 1. Arquitectura y Stack Tecnológico
