@@ -2,7 +2,29 @@
 
 > **Plataforma inteligente de transitabilidad y evaluación de riesgo en caminos rurales para productores agropecuarios en Corrientes.**
 
-AgroRoute es una aplicación web que evalúa la transitabilidad de caminos rurales y rutas en la provincia de Corrientes. A partir de datos satelitales en tiempo real de humedad de suelo, pronóstico de lluvias y la detección del tipo de calzada (asfalto o tierra), calcula el nivel de riesgo de corte o lodazal para sugerir trayectos seguros para el transporte de producción y hacienda.
+En la región del Litoral argentino (particularmente en Corrientes y sus cuencas periurbanas), las precipitaciones intensas y la saturación de los suelos arcillosos/arenosos provocan el colapso recurrente de caminos secundarios de tierra y ripio, especialmente en un contexto de fenómenos climáticos próximos como "El Niño".
+
+Esto genera:
+- 🚛 **Pérdidas millonarias** por empantanamiento de camiones jaula con hacienda en pie.
+- ⏱️ **Retrasos críticos** en el traslado de granos, leche y derivados forestales.
+- 🚨 **Inseguridad vial y aislamiento** de comunidades rurales y personal de campo.
+
+### 💡 La Solución: AgroRoute
+AgroRoute combina cartografía satelital en tiempo real (OSRM), pronósticos hiperlocales de precipitación acumulada a 24 horas (Open-Meteo) y un motor determinista de evaluación de transitabilidad que pondera la saturación del suelo y el tipo de carga para:
+- Analizar simultáneamente la ruta principal (asfalto/ripio) y rutas secundarias alternativas (tierra).
+- Calcular la lluvia proyectada exactamente en el punto medio geométrico de cada traza.
+- Desaconsejar o bloquear tramos intransitables y sugerir la ruta más segura antes de que los vehículos salgan al camino.
+
+### ✨ Características Principales
+- 🗺️ **Cartografía Interactiva Leaflet:** Mapa interactivo optimizado para Corrientes (`[-27.469, -58.830]`) con renderizado polilínea multicapa y código de colores semafórico:
+  - 🟢 **Verde:** Riesgo Bajo / Transitable sin restricciones.
+  - 🟡 **Amarillo / Naranja:** Riesgo Moderado / Alto (Precaución o desaconsejado).
+  - 🔴 **Rojo:** Riesgo Crítico / Intransitable por anegamiento.
+- 🌧️ **Cálculo Meteorológico Hiperlocal:** Integración con Open-Meteo para obtener la precipitación acumulada proyectada (en mm) y probabilidad de lluvia en 6h, 12h y 24h sobre el punto medio de cada trayecto evaluado.
+- 🎛️ **Simulador de Saturación de Suelo:** Capacidad de alternar el estado del terreno entre Seco, Húmedo y Saturado para análisis de sensibilidad y escenarios *what-if*.
+- 🐄 **Evaluación según Tipo de Carga y Calzada:** Adaptación de recomendaciones para calzada de asfalto vs tierra, y hacienda en pie (máxima prioridad de seguridad).
+- 🛡️ **Seguridad Multi-inquilino con PostgreSQL RLS:** Base de datos relacional con Row Level Security que aísla los historiales de análisis por productor agropecuario.
+- ⚡ **Modo de Resiliencia / Fallback Offline:** El backend opera tanto conectado a PostgreSQL como en modo standalone si la base de datos externa no está disponible durante demostraciones o pérdida de conectividad.
 
 ---
 
