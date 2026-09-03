@@ -1,40 +1,37 @@
 /**
  * Servicio de Enrutamiento OSRM para AgroRoute (Región Corrientes)
+ * Integra clasificación real de calzada via Nominatim/OSM (surfaceService)
+ * y garantiza alternativas de ruta dentro del territorio de Corrientes.
+ * 
  * Cumple con BR-007, BR-008, BR-009, BR-010, BR-011, BR-023, BR-050, BR-062, BR-064
  */
 
+const { classifyRouteSurface } = require('./surfaceService');
+
 // Nodos y enlaces rurales estratégicos de la red vial de Corrientes
-// Garantizan que los desvíos secundarios de tierra/ripio se mantengan estrictamente dentro de la provincia
 const CORRIENTES_RURAL_ANCHORS = [
   { id: 'santa-ana', name: 'Santa Ana de los Guácaras (RP 43)', lat: -27.458, lon: -58.653 },
   { id: 'san-cosme', name: 'San Cosme rural (RP 98 / RP 9)', lat: -27.371, lon: -58.511 },
   { id: 'san-cayetano', name: 'San Cayetano (Conexión rural sur)', lat: -27.568, lon: -58.694 },
   { id: 'laguna-brava', name: 'Laguna Brava / RP 5 rural', lat: -27.485, lon: -58.740 },
-  { id: 'riachuelo-rural', name: 'Riachuelo rural', lat: -27.581, lon: -58.745 },
+  { id: 'riachuelo-rural', name: 'Riachuelo rural (Blasco Ibáñez / RP 46)', lat: -27.585, lon: -58.720 },
   { id: 'san-luis-rural', name: 'San Luis del Palmar rural (RP 5)', lat: -27.509, lon: -58.555 }
 ];
 
 /**
  * Valida si una geometría transita estrictamente por territorio de Corrientes
  * y no cruza el Río Paraná hacia la provincia de Chaco o Isla del Cerrito
- * 
- * En Corrientes Capital / Norte:
- * - Longitud < -58.836 indica cruce del puente interprovincial General Belgrano hacia Resistencia/Barranqueras (Chaco).
- * - Latitud > -27.35 con longitud < -58.60 en el cuadrante del río Paraná indica incursión fluvial o en Isla del Cerrito.
  */
 function isStrictlyInCorrientes(coordinates) {
   if (!coordinates || coordinates.length === 0) return false;
 
   for (const [lon, lat] of coordinates) {
-    // Cruzando el puente hacia Chaco (Resistencia/Barranqueras)
     if (lon < -58.836 && lat > -27.55 && lat < -27.40) {
-      return false;
+      return false; // Cruzando puente hacia Resistencia
     }
-    // Incursión en Isla del Cerrito / Chaco norte
     if (lat > -27.33 && lon < -58.62) {
-      return false;
+      return false; // Isla del Cerrito
     }
-    // Fuera de los límites generales de la región evaluada
     if (lon < -58.95) {
       return false;
     }
@@ -43,51 +40,28 @@ function isStrictlyInCorrientes(coordinates) {
 }
 
 /**
- * Encuentra el mejor nodo rural intermedio de Corrientes para generar un desvío secundario realista
+ * Extrae nombre de la ruta principal para display
  */
-function findBestCorrientesRuralAnchor(origin, destination) {
-  const oLat = origin.lat;
-  const oLon = origin.lon;
-  const dLat = destination.lat;
-  const dLon = destination.lon;
+function buildDisplayName(surfaceAnalysis) {
+  const { surfaceType, hasNationalRoute, majorRoads } = surfaceAnalysis;
 
-  // Centro geométrico entre origen y destino
-  const midLat = (oLat + dLat) / 2;
-  const midLon = (oLon + dLon) / 2;
-
-  let bestAnchor = null;
-  let bestScore = Infinity;
-
-  for (const anchor of CORRIENTES_RURAL_ANCHORS) {
-    // Evitar que el nodo coincida con el origen o destino
-    const distToO = Math.hypot(anchor.lat - oLat, anchor.lon - oLon);
-    const distToD = Math.hypot(anchor.lat - dLat, anchor.lon - dLon);
-
-    if (distToO < 0.03 || distToD < 0.03) {
-      continue;
-    }
-
-    // Calcular distancia al punto medio del trayecto
-    const distToMid = Math.hypot(anchor.lat - midLat, anchor.lon - midLon);
-    
-    // Penalizar si el ancla se desvía demasiado lejos del eje de viaje
-    const totalExtraDist = distToO + distToD;
-
-    if (totalExtraDist < bestScore) {
-      bestScore = totalExtraDist;
-      bestAnchor = anchor;
-    }
+  let label = 'Camino Rural';
+  if (hasNationalRoute) {
+    const rnRoad = majorRoads.find(r => /RN\s*\d+/i.test(r)) || majorRoads[0] || 'RN';
+    label = `Ruta por ${rnRoad}`;
+  } else if (majorRoads.length > 0) {
+    label = `Vía ${majorRoads.slice(0, 2).join(' / ')}`;
   }
 
-  return bestAnchor || CORRIENTES_RURAL_ANCHORS[0];
+  if (surfaceType === 'asfalto_ripio') {
+    return hasNationalRoute ? `${label} (Asfalto)` : `${label} (Asfalto / Ripio)`;
+  }
+  return `${label} (Tierra)`;
 }
 
 /**
- * Consulta rutas a OSRM garantizando que todas las alternativas se mantengan en Corrientes
- * 
- * @param {{ lat: number, lon: number }} origin 
- * @param {{ lat: number, lon: number }} destination 
- * @returns {Promise<Array<{ routeIndex: number, routeType: string, surfaceType: string, distanceKm: number, durationMin: number, geometry: any, name: string }>>}
+ * Consulta rutas a OSRM garantizando opciones dentro de Corrientes
+ * y clasifica la superficie real de calzada via Nominatim/OSM
  */
 async function getRoutes(origin, destination) {
   if (!origin || !destination) {
@@ -99,22 +73,20 @@ async function getRoutes(origin, destination) {
   const dLon = Number(destination.lon).toFixed(6);
   const dLat = Number(destination.lat).toFixed(6);
 
-  // 1. Consulta inicial directa con alternativas
-  const primaryUrl = `https://router.project-osrm.org/route/v1/driving/${oLon},${oLat};${dLon},${dLat}?overview=full&geometries=geojson&alternatives=true`;
+  // 1. Consulta directa a OSRM pidiendo alternativas
+  const primaryUrl = `https://router.project-osrm.org/route/v1/driving/${oLon},${oLat};${dLon},${dLat}?overview=full&geometries=geojson&steps=true&alternatives=3`;
 
   let validRoutes = [];
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
     const res = await fetch(primaryUrl, { signal: controller.signal });
     clearTimeout(timeoutId);
 
     if (res.ok) {
       const data = await res.json();
       if (data.routes && data.routes.length > 0) {
-        // Filtrar rutas que no crucen a Chaco ni se salgan de Corrientes
         validRoutes = data.routes.filter(r => isStrictlyInCorrientes(r.geometry?.coordinates));
       }
     }
@@ -122,19 +94,33 @@ async function getRoutes(origin, destination) {
     console.warn('Aviso en consulta directa OSRM:', err.message);
   }
 
-  // 2. Si no hay alternativas válidas dentro de Corrientes, consultamos vía nodo rural de Corrientes (RP 43, etc.)
+  // 2. Si OSRM sólo devolvió 1 ruta, buscamos activamente una alternativa secundaria (BR-007)
   if (validRoutes.length <= 1) {
-    try {
-      const ruralAnchor = findBestCorrientesRuralAnchor(origin, destination);
+    const midLon = (Number(oLon) + Number(dLon)) / 2;
+    const midLat = (Number(oLat) + Number(dLat)) / 2;
+    const dLonDelta = Number(dLon) - Number(oLon);
+    const dLatDelta = Number(dLat) - Number(oLat);
 
-      if (ruralAnchor) {
-        const aLon = Number(ruralAnchor.lon).toFixed(6);
-        const aLat = Number(ruralAnchor.lat).toFixed(6);
+    const candidateWaypoints = [
+      [-58.720, -27.585], // Blasco Ibáñez / RP 46
+      [midLon - dLatDelta * 0.35, midLat + dLonDelta * 0.35],
+      [midLon + dLatDelta * 0.35, midLat - dLonDelta * 0.35],
+      [midLon - dLatDelta * 0.6, midLat + dLonDelta * 0.6],
+      [midLon + dLatDelta * 0.6, midLat - dLonDelta * 0.6],
+      [-58.653, -27.458], // Santa Ana RP 43
+      [-58.511, -27.371], // San Cosme
+      [-58.740, -27.485]  // Laguna Brava
+    ];
 
-        const altUrl = `https://router.project-osrm.org/route/v1/driving/${oLon},${oLat};${aLon},${aLat};${dLon},${dLat}?overview=full&geometries=geojson`;
+    const mainDist = validRoutes[0]?.distance || 10000;
 
+    for (const [wLon, wLat] of candidateWaypoints) {
+      if (wLon < -58.835) continue;
+
+      try {
+        const altUrl = `https://router.project-osrm.org/route/v1/driving/${oLon},${oLat};${wLon.toFixed(4)},${wLat.toFixed(4)};${dLon},${dLat}?overview=full&geometries=geojson&steps=true`;
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
         const altRes = await fetch(altUrl, { signal: controller.signal });
         clearTimeout(timeoutId);
 
@@ -142,20 +128,16 @@ async function getRoutes(origin, destination) {
           const altData = await altRes.json();
           if (altData.routes && altData.routes.length > 0) {
             const altRoute = altData.routes[0];
-            
-            // Validar que no cruce a Chaco y que la distancia sea razonable (máximo 2.2x la principal)
             const isCorrientes = isStrictlyInCorrientes(altRoute.geometry?.coordinates);
-            const mainDistance = validRoutes[0]?.distance || 50000;
-            const isReasonableDistance = altRoute.distance < mainDistance * 2.2;
+            const distDiff = Math.abs(altRoute.distance - mainDist);
 
-            if (isCorrientes && isReasonableDistance) {
+            if (isCorrientes && distDiff > 300 && altRoute.distance < mainDist * 2.5) {
               validRoutes.push(altRoute);
+              break;
             }
           }
         }
-      }
-    } catch (err) {
-      console.warn('No se pudo generar ruta secundaria complementaria en Corrientes:', err.message);
+      } catch { /* continuar */ }
     }
   }
 
@@ -163,29 +145,35 @@ async function getRoutes(origin, destination) {
     throw new Error('No se pudo calcular una ruta transitable dentro de la red vial de Corrientes.');
   }
 
-  // 3. Ordenar rutas por duración (la más rápida es la principal - BR-008)
-  const sorted = [...validRoutes].sort((a, b) => a.duration - b.duration);
+  // 3. Clasificar superficie real de cada ruta usando Nominatim/OSM
+  //    (secuencialmente para respetar el rate limit de Nominatim: 1 req/seg)
+  const analyzedRoutes = [];
 
-  // 4. Mapear y clasificar calzadas según reglas de negocio
-  return sorted.map((route, index) => {
-    const isPrimary = index === 0;
+  for (let i = 0; i < validRoutes.length; i++) {
+    const route = validRoutes[i];
     const distanceKm = Number((route.distance / 1000).toFixed(2));
     const durationMin = Math.round(route.duration / 60);
 
-    return {
-      routeIndex: index,
-      // BR-008, BR-010: Ruta más rápida es principal, el resto secundarias
-      routeType: isPrimary ? 'primary' : 'secondary',
-      // BR-009, BR-011: Principal es asfalto/ripio, alternativas son tierra
-      surfaceType: isPrimary ? 'asfalto_ripio' : 'tierra',
+    // Análisis de superficie real via Nominatim/OSM
+    const surfaceAnalysis = await classifyRouteSurface(route);
+    const displayName = buildDisplayName(surfaceAnalysis);
+
+    analyzedRoutes.push({
+      routeIndex: i,
+      routeType: i === 0 ? 'primary' : 'secondary',
       distanceKm,
       durationMin,
       geometry: route.geometry,
-      name: isPrimary
-        ? 'Ruta Principal (Asfalto / Ripio consolidado)'
-        : `Ruta Secundaria ${index} (Camino de tierra / Desvío rural Corrientes)`
-    };
-  });
+      surfaceType: surfaceAnalysis.surfaceType,
+      majorRoads: surfaceAnalysis.majorRoads,
+      pavedPercentage: surfaceAnalysis.pavedPercent,
+      hasNationalRoute: surfaceAnalysis.hasNationalRoute,
+      osmSurfaceData: surfaceAnalysis.osmSurfaceData,
+      name: displayName
+    });
+  }
+
+  return analyzedRoutes;
 }
 
 module.exports = {

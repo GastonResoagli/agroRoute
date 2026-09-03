@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import ControlPanel from './components/ControlPanel';
 import ResultsPanel from './components/ResultsPanel';
@@ -9,7 +9,7 @@ import { Sliders, Map, BarChart3, AlertCircle, Satellite } from 'lucide-react';
 
 
 export default function App() {
-  // Estado de origen y destino centrado en Corrientes
+  // Origen y destino en Corrientes
   const [origin, setOrigin] = useState({
     name: 'Corrientes Capital',
     lat: -27.469,
@@ -22,16 +22,19 @@ export default function App() {
     lon: -58.555
   });
 
-  // Estado del suelo: por defecto 'auto' (captura y clasifica desde Open-Meteo)
+  // Estado del suelo: detección automática desde Open-Meteo
   const [soilState, setSoilState] = useState('auto');
   const [soilTelemetry, setSoilTelemetry] = useState(null);
   const [soilSource, setSoilSource] = useState('automatic_open_meteo');
 
-  const [cargoType, setCargoType] = useState('hacienda');
   const [simulatedRain, setSimulatedRain] = useState(null);
   const [currentRainForecast, setCurrentRainForecast] = useState(0);
+  const [weatherForecast, setWeatherForecast] = useState(null);
 
-  // Estados de resultados
+  // Calibración manual de superficie por ruta
+  const [surfaceOverrides, setSurfaceOverrides] = useState({});
+
+  // Resultados
   const [routes, setRoutes] = useState([]);
   const [recommendedRouteId, setRecommendedRouteId] = useState(null);
   const [alertMessage, setAlertMessage] = useState(null);
@@ -42,54 +45,53 @@ export default function App() {
   const [error, setError] = useState(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [mapClickMode, setMapClickMode] = useState(null);
-  const [activeMobileTab, setActiveMobileTab] = useState('map'); // 'controls', 'map', 'results'
+  const [activeMobileTab, setActiveMobileTab] = useState('map');
 
   // Función principal de análisis
-  const handleAnalyze = async (rainOverride) => {
+  const handleAnalyze = async (rainOverride, overridesParam) => {
     setIsLoading(true);
     setError(null);
     setMapClickMode(null);
 
     const rainToUse = rainOverride !== undefined ? rainOverride : simulatedRain;
+    const currentOverrides = overridesParam !== undefined ? overridesParam : surfaceOverrides;
 
     try {
       const data = await analyzeRoutes({
         origin,
         destination,
         soil_state: soilState,
-        cargo_type: cargoType,
-        simulated_rain_mm: rainToUse
+        simulated_rain_mm: rainToUse,
+        surface_overrides: currentOverrides
       });
 
       setRoutes(data.routes || []);
       setRecommendedRouteId(data.recommendedRouteId);
       setAlertMessage(data.alertMessage);
 
-      // Guardar telemetría y clasificación de suelo devuelta por el backend
       if (data.soilTelemetry) {
         setSoilTelemetry(data.soilTelemetry);
       }
-      if (data.soilState) {
-        // Reflejar el estado real clasificado
-        if (soilState === 'auto') {
-          setSoilState(data.soilState);
-        }
+      if (data.soilState && soilState === 'auto') {
+        setSoilState(data.soilState);
       }
       setSoilSource(data.soilSource || 'automatic_open_meteo');
 
-      // Si no es lluvia simulada, guardar la lluvia real pronosticada
+      // Guardar pronóstico meteorológico para mostrar en el panel de control
+      if (data.weatherForecast) {
+        setWeatherForecast(data.weatherForecast);
+      }
+
       if (rainToUse === null && data.routes && data.routes[0]) {
         setCurrentRainForecast(data.routes[0].rain24hMm || 0);
       }
 
-      // Enfocar automáticamente la ruta recomendada o la primera
       if (data.recommendedRouteId !== null) {
         setSelectedRouteIndex(data.recommendedRouteId);
       } else if (data.routes && data.routes.length > 0) {
         setSelectedRouteIndex(data.routes[0].routeIndex);
       }
 
-      // En móvil, alternar al mapa tras calcular
       if (window.innerWidth < 1024) {
         setActiveMobileTab('map');
       }
@@ -101,19 +103,26 @@ export default function App() {
     }
   };
 
-  // Manejador del simulador interactivo de lluvia "¿Qué pasaría si llueve X mm?"
+  // Manejador del simulador interactivo de lluvia
   const handleSimulateRain = (rainMm) => {
     setSimulatedRain(rainMm);
     handleAnalyze(rainMm);
   };
 
-  // Carga inicial automática al montar la aplicación
+  // Calibración de superficie de calzada por ruta
+  const handleUpdateSurface = (routeIndex, newSurface) => {
+    const updated = { ...surfaceOverrides, [routeIndex]: newSurface };
+    setSurfaceOverrides(updated);
+    handleAnalyze(undefined, updated);
+  };
+
   useEffect(() => {
     handleAnalyze();
   }, []);
 
   // Manejador de clics en el mapa
   const handleMapClick = (lat, lon) => {
+    setSurfaceOverrides({});
     if (mapClickMode === 'origin') {
       setOrigin({
         name: `Punto [${lat.toFixed(3)}, ${lon.toFixed(3)}]`,
@@ -133,9 +142,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900 font-sans">
-      <Navbar onOpenHelp={() => setIsRulesModalOpen(true)} />
+      <Navbar />
 
-      {/* Barra de pestañas para vista Mobile */}
+      {/* Barra de pestañas para móvil */}
       <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-around text-xs font-bold sticky top-16 z-20 shadow-sm">
         <button
           onClick={() => setActiveMobileTab('controls')}
@@ -144,7 +153,7 @@ export default function App() {
           }`}
         >
           <Sliders className="w-4 h-4" />
-          <span>Filtros / Suelo</span>
+          <span>Trayecto / Suelo</span>
         </button>
 
         <button
@@ -154,7 +163,7 @@ export default function App() {
           }`}
         >
           <Map className="w-4 h-4" />
-          <span>Mapa Semáforo</span>
+          <span>Mapa de Rutas</span>
         </button>
 
         <button
@@ -192,23 +201,21 @@ export default function App() {
         </div>
       )}
 
-      {/* Contenedor Principal Dashboard */}
+      {/* Contenedor Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Columna Izquierda: Panel de Control y Resultados (Desktop) */}
+        {/* Columna Izquierda: Panel de Control y Resultados */}
         <div className="lg:col-span-5 space-y-5 flex flex-col">
-          {/* En Mobile se muestra condicionalmente según la pestaña activa */}
           <div className={`${activeMobileTab === 'controls' ? 'block' : 'hidden'} lg:block`}>
             <ControlPanel
               origin={origin}
-              setOrigin={setOrigin}
+              setOrigin={(o) => { setOrigin(o); setSurfaceOverrides({}); }}
               destination={destination}
-              setDestination={setDestination}
+              setDestination={(d) => { setDestination(d); setSurfaceOverrides({}); }}
               soilState={soilState}
               setSoilState={setSoilState}
               soilTelemetry={soilTelemetry}
               soilSource={soilSource}
-              cargoType={cargoType}
-              setCargoType={setCargoType}
+              weatherForecast={weatherForecast}
               onAnalyze={() => handleAnalyze()}
               isLoading={isLoading}
               mapClickMode={mapClickMode}
@@ -226,6 +233,7 @@ export default function App() {
                 setSelectedRouteIndex(idx);
                 if (window.innerWidth < 1024) setActiveMobileTab('map');
               }}
+              onUpdateSurface={handleUpdateSurface}
               currentRainForecast={currentRainForecast}
               simulatedRain={simulatedRain}
               onSimulateRain={handleSimulateRain}
@@ -250,7 +258,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* Modal Informativo de Reglas de Negocio */}
       <RulesModal
         isOpen={isRulesModalOpen}
         onClose={() => setIsRulesModalOpen(false)}

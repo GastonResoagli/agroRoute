@@ -2,17 +2,17 @@ import React from 'react';
 import RiskBadge from './RiskBadge';
 import { 
   CheckCircle2, 
-  AlertTriangle, 
   Clock, 
-  MapPin, 
   CloudRain, 
-  ShieldAlert, 
-  Layers,
-  ChevronRight,
-  ShieldCheck
+  Milestone
 } from 'lucide-react';
 
-export default function RouteCard({ route, isSelected, onSelect }) {
+export default function RouteCard({ 
+  route, 
+  isSelected, 
+  onSelect,
+  onUpdateSurface
+}) {
   const isRecommended = route.isRecommended;
   const isCritical = route.riskPercentage === 100 || !route.isPassable;
   const isHighRisk = route.riskPercentage >= 80;
@@ -27,7 +27,14 @@ export default function RouteCard({ route, isSelected, onSelect }) {
     cardBorderClass = 'border border-orange-300 bg-orange-50/20';
   }
 
-  const thresholds = route.thresholds;
+  const majorRoads = route.majorRoads || [];
+
+  const handleSurfaceChange = (e) => {
+    e.stopPropagation();
+    if (onUpdateSurface) {
+      onUpdateSurface(route.routeIndex, e.target.value);
+    }
+  };
 
   return (
     <div 
@@ -37,37 +44,57 @@ export default function RouteCard({ route, isSelected, onSelect }) {
       }`}
     >
       {/* Cabecera de la Tarjeta */}
-      <div className="flex items-start justify-between gap-2 mb-2.5">
+      <div className="flex items-start justify-between gap-2 mb-2">
         <div>
-          <div className="flex items-center gap-2">
-            <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
-              route.routeType === 'primary' 
-                ? 'bg-slate-800 text-white' 
-                : 'bg-amber-100 text-amber-900 border border-amber-300'
-            }`}>
-              {route.routeType === 'primary' ? 'Ruta Principal' : 'Camino Secundario'}
-            </span>
-            <span className="text-[11px] text-slate-500 flex items-center gap-1 font-medium">
-              <Layers className="w-3 h-3 text-slate-400" />
-              {route.surfaceType === 'asfalto_ripio' ? 'Asfalto / Ripio consolidado' : 'Calzada de Tierra'}
-            </span>
-          </div>
-          <h3 className="font-bold text-sm text-slate-900 mt-1">
+          {/* Insignias de Rutas principales si las hay (ej. RN 12) */}
+          {majorRoads.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+              {majorRoads.map((road, idx) => (
+                <span 
+                  key={`road-badge-${idx}`}
+                  className={`text-[10px] px-2 py-0.5 rounded font-black border flex items-center gap-1 ${
+                    road.includes('RN') 
+                      ? 'bg-blue-600 text-white border-blue-700 shadow-xs' 
+                      : 'bg-slate-100 text-slate-700 border-slate-300'
+                  }`}
+                >
+                  <Milestone className="w-3 h-3" />
+                  {road}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <h3 className="font-bold text-sm text-slate-900">
             {route.name}
           </h3>
         </div>
 
         {/* Badge Recomendada */}
         {isRecommended && (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-sm shadow-emerald-600/30 animate-pulse">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-sm shadow-emerald-600/30 animate-pulse shrink-0">
             <CheckCircle2 className="w-3.5 h-3.5" />
             RECOMENDADA
           </span>
         )}
       </div>
 
-      {/* Veredicto y Nivel de Riesgo (BR-022, BR-040) */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      {/* Selector de Calzada Simplificado */}
+      <div className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-200/80 mb-3 text-xs">
+        <span className="text-slate-600 font-medium">Calzada:</span>
+        <select
+          value={route.surfaceType}
+          onChange={handleSurfaceChange}
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs font-bold rounded border-slate-300 bg-white py-1 px-2.5 shadow-xs focus:ring-emerald-500 focus:border-emerald-500"
+        >
+          <option value="asfalto_ripio">Asfalto / Ripio</option>
+          <option value="tierra">Tierra</option>
+        </select>
+      </div>
+
+      {/* Riesgo en Porcentaje y Veredicto (Limpio y directo) */}
+      <div className="flex items-center gap-2 mb-3">
         <RiskBadge 
           level={route.riskLevel} 
           percentage={route.riskPercentage} 
@@ -80,18 +107,16 @@ export default function RouteCard({ route, isSelected, onSelect }) {
               ? 'text-orange-700' 
               : 'text-emerald-800'
         }`}>
-          Veredicto: {route.verdict}
+          {route.verdict}
         </span>
       </div>
 
-      {/* Métricas Principales (BR-019, BR-042) */}
+      {/* Métricas Principales (Distancia, Tiempo, Lluvia) */}
       <div className="grid grid-cols-3 gap-2 bg-slate-50 rounded-lg p-2.5 text-center border border-slate-100 mb-3">
-        {/* Distancia */}
         <div>
           <div className="text-[10px] uppercase font-bold text-slate-400">Distancia</div>
           <div className="font-extrabold text-sm text-slate-800">{route.distanceKm} km</div>
         </div>
-        {/* Tiempo estimado */}
         <div>
           <div className="text-[10px] uppercase font-bold text-slate-400">Tiempo Est.</div>
           <div className="font-extrabold text-sm text-slate-800 flex items-center justify-center gap-0.5">
@@ -99,7 +124,6 @@ export default function RouteCard({ route, isSelected, onSelect }) {
             {route.durationMin} min
           </div>
         </div>
-        {/* Lluvia en Punto Medio */}
         <div>
           <div className="text-[10px] uppercase font-bold text-slate-400">Lluvia 24h</div>
           <div className={`font-extrabold text-sm flex items-center justify-center gap-0.5 ${
@@ -111,22 +135,11 @@ export default function RouteCard({ route, isSelected, onSelect }) {
         </div>
       </div>
 
-      {/* Umbrales de Tolerancia del Camino */}
-      {thresholds && (
-        <div className="bg-slate-50/80 rounded-lg p-2 mb-2.5 border border-slate-200/60 text-[11px] text-slate-600 flex items-start gap-1.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-bold text-slate-700">Tolerancia de lluvia: </span>
-            {thresholds.toleratedRainSummary}
-          </div>
-        </div>
-      )}
-
       {/* Barra visual de riesgo */}
-      <div className="space-y-1 mb-2.5">
+      <div className="space-y-1">
         <div className="flex justify-between text-[11px] text-slate-500 font-medium">
-          <span>Índice de Riesgo de Intransitabilidad</span>
-          <span className="font-bold">{route.riskPercentage}%</span>
+          <span>Nivel de Riesgo</span>
+          <span className="font-bold text-slate-800">{route.riskPercentage}%</span>
         </div>
         <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
           <div 
@@ -141,24 +154,6 @@ export default function RouteCard({ route, isSelected, onSelect }) {
             }`}
             style={{ width: `${Math.max(5, route.riskPercentage)}%` }}
           />
-        </div>
-      </div>
-
-      {/* Explicación y Justificación (BR-057) */}
-      <div className="text-xs text-slate-600 bg-white/80 rounded p-2 border border-slate-100 flex items-start gap-1.5">
-        {isCritical ? (
-          <ShieldAlert className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-        ) : isHighRisk ? (
-          <AlertTriangle className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
-        ) : (
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-        )}
-        <div>
-          <span className="font-semibold text-slate-700">Evaluación: </span>
-          {route.explanation}
-          {route.ruleApplied && (
-            <span className="ml-1 text-[10px] font-mono text-slate-400">({route.ruleApplied})</span>
-          )}
         </div>
       </div>
     </div>

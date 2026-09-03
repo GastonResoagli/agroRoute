@@ -2,21 +2,18 @@ import React, { useState } from 'react';
 import { CORRIENTES_LOCATIONS } from '../data/presets';
 import { 
   Navigation, 
-  MapPin, 
   Sun, 
   CloudRain, 
   Waves, 
-  Beef, 
-  Wheat, 
-  Truck, 
   Play, 
   RotateCcw,
-  Sparkles,
   MousePointerClick,
   Satellite,
-  CheckCircle2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Clock,
+  Wind,
+  Droplets
 } from 'lucide-react';
 
 export default function ControlPanel({
@@ -28,8 +25,7 @@ export default function ControlPanel({
   setSoilState,
   soilTelemetry,
   soilSource,
-  cargoType,
-  setCargoType,
+  weatherForecast,
   onAnalyze,
   isLoading,
   mapClickMode,
@@ -39,16 +35,12 @@ export default function ControlPanel({
 
   const handleOriginChange = (e) => {
     const loc = CORRIENTES_LOCATIONS.find(l => l.id === e.target.value);
-    if (loc) {
-      setOrigin({ name: loc.name, lat: loc.lat, lon: loc.lon });
-    }
+    if (loc) setOrigin({ name: loc.name, lat: loc.lat, lon: loc.lon });
   };
 
   const handleDestinationChange = (e) => {
     const loc = CORRIENTES_LOCATIONS.find(l => l.id === e.target.value);
-    if (loc) {
-      setDestination({ name: loc.name, lat: loc.lat, lon: loc.lon });
-    }
+    if (loc) setDestination({ name: loc.name, lat: loc.lat, lon: loc.lon });
   };
 
   const handleSwap = () => {
@@ -58,24 +50,22 @@ export default function ControlPanel({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-5">
-      {/* Selector de Trayecto en Corrientes */}
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-4">
+
+      {/* Selector de Trayecto */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
             <Navigation className="w-3.5 h-3.5 text-emerald-600" />
-            Trayecto del Productor (Corrientes)
+            Trayecto (Corrientes)
           </label>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSwap}
-              className="text-xs text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-1 hover:underline"
-              title="Invertir origen y destino"
-            >
-              <RotateCcw className="w-3 h-3" /> Invertir
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleSwap}
+            className="text-xs text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-1 hover:underline"
+          >
+            <RotateCcw className="w-3 h-3" /> Invertir
+          </button>
         </div>
 
         {/* Origen */}
@@ -95,7 +85,7 @@ export default function ControlPanel({
               }`}
             >
               <MousePointerClick className="w-3 h-3" />
-              {mapClickMode === 'origin' ? 'Clic en el mapa activo' : 'Fijar en mapa'}
+              {mapClickMode === 'origin' ? 'Haz clic en el mapa' : 'Fijar en mapa'}
             </button>
           </div>
           <select
@@ -131,7 +121,7 @@ export default function ControlPanel({
               }`}
             >
               <MousePointerClick className="w-3 h-3" />
-              {mapClickMode === 'destination' ? 'Clic en el mapa activo' : 'Fijar en mapa'}
+              {mapClickMode === 'destination' ? 'Haz clic en el mapa' : 'Fijar en mapa'}
             </button>
           </div>
           <select
@@ -153,20 +143,19 @@ export default function ControlPanel({
 
       <hr className="border-slate-100" />
 
-      {/* ESTADO DEL SUELO: DETECCIÓN Y CLASIFICACIÓN AUTOMÁTICA */}
-      <div className="space-y-2.5">
+      {/* ESTADO DEL SUELO: DETECCIÓN SATELITAL */}
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
             <Satellite className="w-3.5 h-3.5 text-blue-600" />
-            Estado del Suelo (Detección Automática)
+            Estado del Suelo
           </label>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 font-bold text-blue-800">
-            Open-Meteo Satelital
+            {soilSource === 'manual_override' ? 'Calibrado manualmente' : 'Detección Satelital'}
           </span>
         </div>
 
-        {/* Tarjeta de Telemetría Real de Suelo */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {soilState === 'Saturado' ? (
@@ -183,19 +172,11 @@ export default function ControlPanel({
                 </div>
               )}
               <div>
-                <div className="text-[10px] uppercase font-bold text-slate-400">
-                  Clasificación Agronómica
-                </div>
-                <div className="text-sm font-black text-slate-900 flex items-center gap-1.5">
-                  Suelo {soilState}
-                  <span className="text-[10px] font-normal px-2 py-0.2 rounded-full bg-slate-200 text-slate-700">
-                    {soilSource === 'manual_override' ? 'Modo Calibración' : 'Automático'}
-                  </span>
-                </div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">Humedad de Campo</div>
+                <div className="text-sm font-black text-slate-900">Suelo {soilState || '...'}</div>
               </div>
             </div>
 
-            {/* Datos cuantitativos */}
             {soilTelemetry && (
               <div className="text-right text-xs">
                 <div className="font-bold text-slate-800">{soilTelemetry.moisturePercent}% humedad</div>
@@ -210,88 +191,94 @@ export default function ControlPanel({
             </p>
           )}
 
-          {/* Toggle para sobrescribir manualmente si se desea calibrar */}
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={() => setShowManualSoil(!showManualSoil)}
-              className="text-[11px] text-blue-700 hover:text-blue-900 font-semibold flex items-center gap-1 hover:underline"
-            >
-              {showManualSoil ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              {showManualSoil ? 'Ocultar ajuste manual' : '¿Deseas forzar otro estado de suelo para probar?'}
-            </button>
+          <button
+            type="button"
+            onClick={() => setShowManualSoil(!showManualSoil)}
+            className="text-[11px] text-blue-700 hover:text-blue-900 font-semibold flex items-center gap-1 hover:underline"
+          >
+            {showManualSoil ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {showManualSoil ? 'Ocultar ajuste manual' : '¿Probar con otro estado de suelo?'}
+          </button>
 
-            {showManualSoil && (
-              <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-slate-200">
-                {['Seco', 'Húmedo', 'Saturado'].map((st) => (
-                  <button
-                    key={`soil-override-${st}`}
-                    type="button"
-                    onClick={() => setSoilState(st)}
-                    className={`py-1.5 px-2 rounded-lg border text-xs font-bold transition-all ${
-                      soilState === st
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
+          {showManualSoil && (
+            <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-200">
+              {['Seco', 'Húmedo', 'Saturado'].map((st) => (
+                <button
+                  key={`soil-${st}`}
+                  type="button"
+                  onClick={() => setSoilState(st)}
+                  className={`py-1.5 px-2 rounded-lg border text-xs font-bold transition-all ${
+                    soilState === st
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Probabilidad de lluvia y mm por llover en esas horas */}
+      {weatherForecast && (
+        <>
+          <hr className="border-slate-100" />
+
+          <div className="grid grid-cols-3 gap-2">
+            {/* 6 Horas */}
+            <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-2.5 text-center">
+              <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center justify-center gap-1">
+                <Clock className="w-3 h-3 text-slate-400" />
+                6 Horas
               </div>
-            )}
+              <div className="text-lg font-black text-slate-900 mt-0.5">
+                {weatherForecast.forecast6h} <span className="text-[11px] font-bold text-slate-500">mm</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">por llover</div>
+              <div className="mt-1.5 text-xs font-bold text-blue-700 bg-blue-50 py-0.5 px-1 rounded-md border border-blue-100 flex items-center justify-center gap-1">
+                <Droplets className="w-3 h-3 text-blue-500" />
+                {weatherForecast.maxProb6h || 0}% prob.
+              </div>
+            </div>
+
+            {/* 12 Horas */}
+            <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-2.5 text-center">
+              <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center justify-center gap-1">
+                <Clock className="w-3 h-3 text-slate-400" />
+                12 Horas
+              </div>
+              <div className="text-lg font-black text-slate-900 mt-0.5">
+                {weatherForecast.forecast12h} <span className="text-[11px] font-bold text-slate-500">mm</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">por llover</div>
+              <div className="mt-1.5 text-xs font-bold text-blue-700 bg-blue-50 py-0.5 px-1 rounded-md border border-blue-100 flex items-center justify-center gap-1">
+                <Droplets className="w-3 h-3 text-blue-500" />
+                {weatherForecast.maxProb12h || 0}% prob.
+              </div>
+            </div>
+
+            {/* 24 Horas */}
+            <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-2.5 text-center">
+              <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center justify-center gap-1">
+                <Clock className="w-3 h-3 text-slate-400" />
+                24 Horas
+              </div>
+              <div className="text-lg font-black text-slate-900 mt-0.5">
+                {weatherForecast.forecast24h} <span className="text-[11px] font-bold text-slate-500">mm</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">por llover</div>
+              <div className="mt-1.5 text-xs font-bold text-blue-700 bg-blue-50 py-0.5 px-1 rounded-md border border-blue-100 flex items-center justify-center gap-1">
+                <Droplets className="w-3 h-3 text-blue-500" />
+                {weatherForecast.maxProb24h ?? weatherForecast.maxProb12h ?? 0}% prob.
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      <hr className="border-slate-100" />
-
-      {/* Tipo de Carga / Traslado (BR-002) */}
-      <div className="space-y-2">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-          <Truck className="w-3.5 h-3.5 text-emerald-600" />
-          Tipo de Traslado (BR-002)
-        </label>
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => setCargoType('hacienda')}
-            className={`p-2 rounded-lg border text-xs font-medium flex flex-col items-center gap-1 transition-all ${
-              cargoType === 'hacienda'
-                ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm ring-1 ring-emerald-500'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <Beef className="w-4 h-4 text-amber-700" />
-            <span>Hacienda</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setCargoType('granos')}
-            className={`p-2 rounded-lg border text-xs font-medium flex flex-col items-center gap-1 transition-all ${
-              cargoType === 'granos'
-                ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm ring-1 ring-emerald-500'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <Wheat className="w-4 h-4 text-amber-500" />
-            <span>Granos</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setCargoType('general')}
-            className={`p-2 rounded-lg border text-xs font-medium flex flex-col items-center gap-1 transition-all ${
-              cargoType === 'general'
-                ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm ring-1 ring-emerald-500'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <Truck className="w-4 h-4 text-slate-500" />
-            <span>General</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Botón Principal de Análisis */}
+      {/* Botón Principal */}
       <button
         type="button"
         onClick={onAnalyze}
@@ -301,12 +288,12 @@ export default function ControlPanel({
         {isLoading ? (
           <>
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            <span>Analizando caminos y telemetría de suelo...</span>
+            <span>Consultando rutas y calzadas...</span>
           </>
         ) : (
           <>
             <Play className="w-4 h-4 fill-white" />
-            <span>Evaluar Transitabilidad en Tiempo Real</span>
+            <span>Consultar Rutas y Transitabilidad</span>
           </>
         )}
       </button>
