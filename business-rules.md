@@ -1,85 +1,92 @@
-# Reglas de negocio — AgroRoute
+# Reglas de negocio — Ruta Segura
 
 ## Alcance
 
-Estas reglas se derivan exclusivamente del brief de producto de AgroRoute. Describen el comportamiento esperado de una herramienta de recomendación de transitabilidad rural y desvíos seguros para el área periurbana de Corrientes.
+Estas reglas se derivan exclusivamente de `prompt.md`. Describen una solución que recomienda rutas para productores agropecuarios evaluando el clima y la saturación del suelo.
 
 ## Reglas explícitas
 
-- **BR-001 — Propósito del servicio:** La solución debe anticipar el estado de los caminos rurales según las condiciones climáticas, ofrecer alternativas seguras y centralizar actividades y eventos del sector.
-- **BR-002 — Área cubierta:** La visualización y las recomendaciones deben centrarse en el área periurbana de Corrientes, incluyendo Riachuelo, San Cayetano, San Luis del Palmar y Santa Ana.
-- **BR-003 — Horizonte de predicción:** El servicio debe ofrecer predicciones de transitabilidad con hasta 72 horas de anticipación.
-- **BR-004 — Cobertura mínima del MVP:** El MVP debe contemplar entre 5 y 8 tramos críticos de caminos reales.
-- **BR-005 — Estados de transitabilidad:** Cada tramo debe clasificarse en uno de tres estados: verde, amarillo o rojo.
-- **BR-006 — Significado del estado verde:** Un tramo verde se considera transitable sin restricciones.
-- **BR-007 — Significado del estado amarillo:** Un tramo amarillo se considera transitable con precaución y con posibilidad de deterioro.
-- **BR-008 — Significado del estado rojo:** Un tramo rojo se considera intransitable por riesgo de empantanamiento.
-- **BR-009 — Momentos de consulta:** La persona usuaria debe poder consultar el estado para Hoy, +24 horas, +48 horas y +72 horas.
-- **BR-010 — Actualización por momento:** Al cambiar el momento consultado, el estado de cada tramo debe actualizarse según la lluvia pronosticada y el tipo de superficie.
-- **BR-011 — Superficie asfáltica:** Los caminos de asfalto deben considerarse de alta tolerancia a la lluvia.
-- **BR-012 — Superficie de ripio o consolidada:** Los caminos de ripio o consolidados deben considerarse de tolerancia media a la lluvia.
-- **BR-013 — Superficie de tierra o arena arcillosa:** Los caminos de tierra o arena arcillosa deben considerarse de baja tolerancia y susceptibles de deteriorarse rápidamente con lluvias moderadas.
-- **BR-014 — Selección del trayecto:** La persona usuaria debe poder indicar una ubicación de partida y un destino dentro del área cubierta.
-- **BR-015 — Detección de compromiso:** Si el trayecto directo contiene al menos un tramo rojo, el sistema debe considerarlo comprometido.
-- **BR-016 — Bloqueo visual del trayecto:** Cuando el trayecto directo esté comprometido, debe mostrarse visualmente como bloqueado.
-- **BR-017 — Alerta crítica:** Cuando el trayecto directo esté comprometido, debe emitirse una alerta crítica que informe el motivo, incluyendo la lluvia proyectada y el tipo de camino involucrado.
-- **BR-018 — Recomendación de desvío:** Ante un trayecto directo comprometido, el sistema debe sugerir una ruta alternativa.
-- **BR-019 — Prioridad del desvío:** La ruta alternativa debe priorizar caminos de asfalto o ripio que se encuentren en buen estado.
-- **BR-020 — Comparación de trayectos:** La recomendación debe informar la diferencia de distancia y de tiempo entre el trayecto directo y el desvío sugerido.
-- **BR-021 — Usuarios destinatarios:** La solución debe contemplar las necesidades de productores agropecuarios, transportistas de hacienda o granos, vecinos rurales y agentes del Ministerio de Producción.
-- **BR-022 — Finalidad preventiva:** Las alertas y recomendaciones deben orientarse a reducir pérdidas por empantanamiento y mejorar la coordinación logística regional.
+- **BR-001 — Propósito de la solución:** La solución debe recomendar la mejor ruta disponible para productores agropecuarios considerando el clima y la saturación del suelo.
+- **BR-002 — Tipo de traslado:** Las recomendaciones deben contemplar el traslado de mercadería y de ganado durante condiciones que puedan producir anegamiento.
+- **BR-003 — Datos de la solicitud:** Cada solicitud debe incluir un origen, un destino y el estado previo del suelo.
+- **BR-004 — Estados previos del suelo:** El estado previo del suelo debe clasificarse como Seco, Húmedo o Saturado.
+- **BR-005 — Clima considerado:** La evaluación debe considerar la precipitación acumulada proyectada para las próximas 24 horas.
+- **BR-006 — Ubicación de la lluvia:** La precipitación utilizada para evaluar una ruta debe corresponder al punto medio del trayecto.
+- **BR-007 — Rutas analizadas:** La recomendación debe analizar la ruta principal y las rutas alternativas disponibles.
+- **BR-008 — Ruta principal:** La ruta más rápida debe considerarse la ruta principal.
+- **BR-009 — Superficie asumida para la ruta principal:** La ruta principal debe considerarse de asfalto o ripio consolidado.
+- **BR-010 — Rutas alternativas:** Las rutas alternativas deben considerarse caminos secundarios.
+- **BR-011 — Superficie asumida para alternativas:** Los caminos secundarios deben considerarse de tierra.
+- **BR-012 — Riesgo en camino secundario seco:** Un camino secundario con suelo Seco debe clasificarse con riesgo bajo.
+- **BR-013 — Riesgo en camino secundario húmedo:** Un camino secundario con suelo Húmedo y lluvia proyectada superior a 10 mm debe clasificarse con riesgo alto.
+- **BR-014 — Porcentaje de riesgo alto:** El riesgo alto definido para un camino secundario con suelo Húmedo y lluvia superior a 10 mm debe expresarse como 80%.
+- **BR-015 — Riesgo crítico por lluvia:** Cuando la lluvia proyectada supere los 30 mm, la ruta debe clasificarse con riesgo crítico.
+- **BR-016 — Porcentaje de riesgo crítico:** El riesgo crítico producido por lluvia superior a 30 mm debe expresarse como 100%.
+- **BR-017 — Intransitabilidad:** Una ruta con riesgo crítico debe considerarse intransitable.
+- **BR-018 — Ruta recomendada:** La solución debe identificar cuál de las rutas analizadas es la ruta recomendada.
+- **BR-019 — Información de cada ruta:** El resultado debe informar la geometría, la distancia total, la lluvia esperada en el trayecto, el porcentaje de riesgo y el veredicto de cada ruta analizada.
+- **BR-020 — Representación de la ruta recomendada:** La ruta recomendada debe diferenciarse visualmente de las demás rutas.
+- **BR-021 — Representación del riesgo:** Las rutas con riesgo alto deben diferenciarse visualmente mediante una señal de riesgo.
+- **BR-022 — Veredicto:** Cada ruta analizada debe tener un veredicto coherente con su nivel de riesgo y su transitabilidad.
+- **BR-023 — Zona de referencia:** La solución debe tomar como referencia geográfica el Litoral, incluyendo la zona de Corrientes.
 
 ## Restricciones
 
-- **BR-023 — Alcance geográfico restringido:** No debe presentarse la cobertura como válida fuera del área periurbana definida y sus cuatro localidades mencionadas.
-- **BR-024 — Alcance temporal restringido:** Las posiciones de consulta deben limitarse a Hoy, +24 horas, +48 horas y +72 horas.
-- **BR-025 — Datos simulados para el MVP:** La experiencia del MVP debe funcionar con datos simulados y sin depender de una conexión a bases de datos o servicios externos.
-- **BR-026 — Aplicación de una sola página:** La solución debe operar como una única página.
-- **BR-027 — Criterios de transitabilidad:** La clasificación debe considerar conjuntamente la lluvia y la superficie del camino; no debe basarse únicamente en uno de esos factores.
-- **BR-028 — Restricción de ruta insegura:** Un trayecto directo con un tramo rojo no debe presentarse como alternativa segura.
-- **BR-029 — Naturaleza de la recomendación:** La solución debe simular una recomendación para transporte de mercadería y traslado de ganado durante eventos climáticos adversos.
+- **BR-024 — Restricción del suelo:** El estado del suelo solo puede ser Seco, Húmedo o Saturado.
+- **BR-025 — Restricción temporal:** La evaluación climática debe limitarse a la precipitación proyectada de las próximas 24 horas.
+- **BR-026 — Restricción del criterio crítico:** Una lluvia proyectada superior a 30 mm debe prevalecer como condición de riesgo crítico, independientemente de que la ruta sea principal o alternativa.
+- **BR-027 — Restricción de transitabilidad:** Una ruta intransitable no debe identificarse como ruta recomendada.
+- **BR-028 — Restricción de recomendación:** La ruta recomendada debe seleccionarse únicamente entre las rutas que hayan sido analizadas.
+- **BR-029 — Restricción de cobertura informativa:** No debe emitirse un resultado completo si faltan el origen, el destino, el estado previo del suelo o la lluvia esperada del trayecto.
+- **BR-030 — Restricción de interpretación:** La solución debe presentar una recomendación para apoyar la decisión de traslado, no una garantía de transitabilidad real.
+- **BR-031 — Restricción de fuentes del alcance:** Para el MVP, la información debe basarse en los datos y servicios indicados en `prompt.md`.
 
 ## Validaciones
 
-- **BR-030 — Validación de ubicación de partida:** La ubicación de partida debe pertenecer al área cubierta para poder solicitar una recomendación.
-- **BR-031 — Validación de destino:** El destino debe pertenecer al área cubierta para poder solicitar una recomendación.
-- **BR-032 — Validación de tramo considerado:** Solo deben considerarse en el mapa los 5 a 8 tramos críticos definidos para el MVP.
-- **BR-033 — Validación de superficie:** Cada tramo considerado debe tener identificada una superficie dentro de las categorías asfalto, ripio/consolidado o tierra/arena arcillosa.
-- **BR-034 — Validación del momento:** La consulta debe corresponder a uno de los cuatro momentos habilitados.
-- **BR-035 — Validación de alerta crítica:** La alerta crítica debe indicar tanto la lluvia proyectada como el tipo de camino que origina o contribuye al riesgo.
-- **BR-036 — Validación de desvío:** La ruta alternativa solo debe sugerirse cuando el trayecto directo contenga un tramo rojo.
-- **BR-037 — Validación de comparación:** Toda ruta alternativa sugerida debe incluir la diferencia de distancia y tiempo respecto del trayecto directo.
+- **BR-032 — Validación de origen:** Debe verificarse que la solicitud contenga un origen identificable.
+- **BR-033 — Validación de destino:** Debe verificarse que la solicitud contenga un destino identificable.
+- **BR-034 — Validación de origen y destino distintos:** El origen y el destino deben representar ubicaciones diferentes para que exista un trayecto que evaluar.
+- **BR-035 — Validación del estado del suelo:** Debe rechazarse cualquier estado del suelo distinto de Seco, Húmedo o Saturado.
+- **BR-036 — Validación climática:** Debe existir una precipitación acumulada proyectada para las próximas 24 horas antes de emitir riesgos.
+- **BR-037 — Validación de ubicación climática:** La lluvia utilizada debe estar asociada al punto medio del trayecto evaluado.
+- **BR-038 — Validación de rutas:** Debe existir al menos una ruta analizada para poder emitir una recomendación.
+- **BR-039 — Validación de ruta recomendada:** El resultado debe marcar una única ruta como recomendada.
+- **BR-040 — Validación de riesgo:** El porcentaje informado debe coincidir con el nivel de riesgo determinado para las condiciones de la ruta.
+- **BR-041 — Validación de intransitabilidad:** Toda ruta con riesgo crítico debe mostrar un veredicto de intransitable.
+- **BR-042 — Validación de resultados:** Cada ruta devuelta debe incluir distancia, lluvia esperada, porcentaje de riesgo y veredicto.
 
 ## Casos borde
 
-- **BR-038 — Partida o destino fuera de cobertura:** Si la partida o el destino están fuera del área cubierta, no debe emitirse una recomendación de ruta dentro del servicio.
-- **BR-039 — Trayecto directo sin tramos rojos:** Si todos los tramos del trayecto directo están verdes o amarillos, no corresponde activar la alerta crítica ni exigir un desvío.
-- **BR-040 — Trayecto con varios tramos rojos:** Si el trayecto directo contiene más de un tramo rojo, la alerta debe reflejar que el trayecto está comprometido y el desvío debe evitar los tramos rojos identificados.
-- **BR-041 — Deterioro por lluvia moderada:** Un tramo de tierra o arena arcillosa puede pasar a una condición de mayor riesgo ante lluvia moderada, aunque un tramo de asfalto o ripio reciba una lluvia comparable.
-- **BR-042 — Consulta a +72 horas:** La consulta de +72 horas debe seguir siendo válida aunque represente el límite máximo de anticipación del servicio.
-- **BR-043 — Ausencia de desvío seguro:** Si no existe una ruta alternativa que priorice asfalto o ripio en buen estado, el servicio no debe presentarla como segura.
-- **BR-044 — Diferencia de trayectos no disponible:** No debe mostrarse una recomendación completa si no es posible informar la diferencia de distancia y tiempo requerida.
-- **BR-045 — Riesgo de inundación:** Cuando las condiciones meteorológicas amenacen con inundaciones de los campos, las alertas deben tratar el escenario como un evento climático adverso relevante para la decisión de transporte.
+- **BR-043 — Lluvia exactamente igual a 10 mm:** Una lluvia proyectada de 10 mm no supera el umbral de riesgo alto indicado para el camino secundario con suelo Húmedo.
+- **BR-044 — Lluvia exactamente igual a 30 mm:** Una lluvia proyectada de 30 mm no supera el umbral que define el riesgo crítico.
+- **BR-045 — Lluvia superior a 30 mm en ruta principal:** La ruta principal debe clasificarse como crítica e intransitable aunque se considere de asfalto o ripio consolidado.
+- **BR-046 — Lluvia superior a 30 mm en ruta alternativa:** La ruta alternativa debe clasificarse como crítica e intransitable aunque el suelo previo sea Seco.
+- **BR-047 — Suelo Saturado sin lluvia superior a 30 mm:** El prompt no define un porcentaje específico para esta combinación; debe evitarse asignar un valor inventado y conservarse un veredicto coherente con la información disponible.
+- **BR-048 — Camino secundario seco con lluvia superior a 30 mm:** La condición de riesgo crítico debe prevalecer sobre la clasificación de riesgo bajo asociada al suelo Seco.
+- **BR-049 — Varias rutas con riesgo crítico:** No debe recomendarse una ruta que tenga riesgo crítico; si todas las rutas resultan intransitables, debe informarse que no existe una alternativa transitable identificada.
+- **BR-050 — Ausencia de rutas alternativas:** La ruta principal puede analizarse, pero no debe afirmarse que existe un desvío si no hay rutas alternativas disponibles.
+- **BR-051 — Origen igual al destino:** La solicitud debe considerarse inválida porque no define un trayecto.
+- **BR-052 — Lluvia no disponible:** No debe calcularse ni mostrarse un porcentaje de riesgo basado en una precipitación ausente.
+- **BR-053 — Diferencias entre rutas:** Si las rutas tienen distinta distancia o lluvia esperada, cada una debe conservar sus propios valores en el resultado.
 
 ## Reglas implícitas necesarias
 
-- **BR-046 — Estado único por consulta:** Cada tramo debe mostrar un único estado para cada momento seleccionado, de modo que la persona usuaria pueda tomar una decisión clara.
-- **BR-047 — Coherencia temporal:** La predicción mostrada debe corresponder al momento seleccionado y no mezclar estados de distintos horizontes.
-- **BR-048 — Priorización de seguridad:** La seguridad y la transitabilidad deben prevalecer sobre la menor distancia o el menor tiempo cuando se compare un trayecto directo con un desvío.
-- **BR-049 — Trazabilidad del riesgo:** Toda clasificación roja debe poder asociarse a una condición climática proyectada y a una superficie de camino que expliquen el riesgo.
-- **BR-050 — Información para la decisión:** La información presentada debe permitir comparar el estado del camino, el motivo de la alerta y el costo de tomar el desvío.
-- **BR-051 — Contexto de uso:** Las recomendaciones deben interpretarse como apoyo a la decisión de productores, transportistas, vecinos rurales y agentes públicos, especialmente ante lluvias, empantanamiento o inundación.
-- **BR-052 — Datos territoriales complementarios:** Para mejorar la evaluación del riesgo, deben considerarse la humedad antecedente, el tipo de suelo, el relieve, las pendientes y los bajos con potencial de inundación.
+- **BR-054 — Comparabilidad:** Todas las rutas comparadas deben evaluarse con el mismo origen, destino, estado previo del suelo y horizonte de lluvia.
+- **BR-055 — Consistencia del veredicto:** El veredicto debe reflejar el nivel de riesgo y no contradecir la condición de intransitabilidad.
+- **BR-056 — Prioridad de seguridad:** La recomendación debe priorizar que la ruta sea transitable por encima de que sea la más rápida cuando ambas condiciones entren en conflicto.
+- **BR-057 — Explicabilidad:** La recomendación debe poder justificarse mediante la lluvia esperada, el estado del suelo, la distancia y el riesgo de cada ruta.
+- **BR-058 — Separación de estados:** El estado previo del suelo debe representar la condición existente antes de la lluvia proyectada y no confundirse con el pronóstico climático.
+- **BR-059 — Actualidad de la evaluación:** La lluvia esperada debe corresponder al horizonte de 24 horas utilizado para la solicitud, para evitar decisiones basadas en un período diferente.
+- **BR-060 — Tratamiento conservador de incertidumbre:** Cuando el prompt no define una combinación de condiciones, no deben inventarse porcentajes ni umbrales adicionales.
+- **BR-061 — Transparencia de alcance:** El resultado debe dejar claro que la evaluación es una recomendación basada en las condiciones suministradas.
 
-## Sugerencias de herramientas y fuentes para Corrientes, Argentina
+## Sugerencias de uso de herramientas para Corrientes, Argentina
 
-Las siguientes sugerencias se limitan a las fuentes mencionadas en el brief y se entienden como insumos para mantener actualizada la información del dominio.
+Estas sugerencias se limitan a las herramientas y fuentes mencionadas en `prompt.md`.
 
-- **BR-053 — Caminos y superficies:** Usar OpenStreetMap para relevar caminos etiquetados como tierra o no clasificados en Corrientes y complementar la red vial con datos oficiales del Instituto Geográfico Nacional.
-- **BR-054 — Caminos internos:** Incorporar trazas manuales en GeoJSON o registros obtenidos mediante GPS de productores para representar caminos internos de estancias cuando no estén disponibles en las fuentes generales.
-- **BR-055 — Pronóstico horario:** Consultar OpenWeatherMap o WeatherAPI para obtener lluvia acumulada reciente y pronósticos horarios de corto plazo para las coordenadas de la zona cubierta.
-- **BR-056 — Pronóstico hiperlocal:** Evaluar Tomorrow.io cuando se requiera diferenciar precipitaciones entre campos o ubicaciones cercanas.
-- **BR-057 — Suelo y humedad:** Consultar las herramientas satelitales del INTA (SEPA) para acceder a información sobre agua en el suelo, humedad y tipos de suelo de la región.
-- **BR-058 — Humedad satelital:** Considerar datos públicos de NASA SMAP y de la misión SAOCOM/CONAE como apoyo para estimar la humedad del suelo en el Litoral.
-- **BR-059 — Relieve y bajos:** Utilizar un modelo digital de elevación para identificar pendientes y zonas bajas que puedan influir en el anegamiento de caminos.
-- **BR-060 — Actualización de información:** Mantener actualizados los datos meteorológicos y territoriales con una periodicidad definida por el equipo, de forma que la información disponible refleje las condiciones más recientes.
+- **BR-062 — Cálculo de trayectos:** Usar OSRM para obtener la ruta principal y las rutas alternativas entre ubicaciones de Corrientes y del Litoral.
+- **BR-063 — Información meteorológica:** Usar Open-Meteo para consultar la precipitación acumulada proyectada de las próximas 24 horas en el punto medio de cada trayecto.
+- **BR-064 — Uso regional:** Configurar las consultas de rutas y clima para ubicaciones de Corrientes, tomando como referencia inicial el área del Litoral indicada en el prompt.
+- **BR-065 — Simulación del suelo:** Usar el selector de estado previo del suelo para representar en las pruebas las condiciones Seco, Húmedo y Saturado.
+- **BR-066 — Pruebas de decisión:** Probar como mínimo los escenarios de camino secundario con suelo Seco, camino secundario con suelo Húmedo y lluvia superior a 10 mm, y lluvia superior a 30 mm.
+- **BR-067 — Presentación para usuarios móviles:** Organizar la información de las rutas para que productores agropecuarios puedan comparar distancia, lluvia, riesgo y veredicto desde una experiencia orientada a dispositivos móviles.
