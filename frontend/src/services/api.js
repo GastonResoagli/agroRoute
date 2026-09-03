@@ -2,7 +2,8 @@
  * Cliente de API para el frontend de AgroRoute
  */
 
-const API_BASE = '/api';
+const rawBase = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
 
 export async function analyzeRoutes(payload) {
   const response = await fetch(`${API_BASE}/routes/analyze`, {

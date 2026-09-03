@@ -1,11 +1,20 @@
 const { Pool } = require('pg');
 const crypto = require('crypto');
 
+// Detección automática de SSL para Render, Neon o producción
+const isSslRequired = process.env.DATABASE_SSL === 'true' ||
+  (process.env.DATABASE_URL && (
+    process.env.DATABASE_URL.includes('render.com') ||
+    process.env.DATABASE_URL.includes('neon.tech') ||
+    process.env.DATABASE_URL.includes('supabase') ||
+    process.env.NODE_ENV === 'production'
+  ));
+
 // Configuración de conexión a PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/agroroute',
-  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
-  connectionTimeoutMillis: 2000,
+  ssl: isSslRequired ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 5000,
 });
 
 // Prevenir caídas no controladas por eventos de desconexión en el pool
