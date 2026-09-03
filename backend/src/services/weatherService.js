@@ -6,15 +6,6 @@
 
 /**
  * Clasifica agronómicamente el estado del suelo según humedad volumétrica y lluvias recientes
- * Criterios técnicos adaptados a la cuenca periurbana y rural de Corrientes (suelos franco-arenosos/arcillosos):
- * 
- * - Saturado: Humedad volumétrica >= 0.35 m³/m³ (o lluvias previas 48h > 35 mm) -> Capacidad de campo colmada, barro líquido y anegamiento.
- * - Húmedo: Humedad volumétrica entre 0.20 y 0.35 m³/m³ (o lluvias previas 48h > 10 mm) -> Plasticidad presente, riesgo de huellones.
- * - Seco: Humedad volumétrica < 0.20 m³/m³ y lluvias previas <= 10 mm -> Firmeza y alta capacidad de infiltración inicial.
- * 
- * @param {number} volumetricMoisture - Humedad de suelo en m³/m³ (0.00 a 0.50 aprox)
- * @param {number} pastRain48hMm - Lluvias acumuladas en las últimas 48 horas en mm
- * @returns {{ state: 'Seco'|'Húmedo'|'Saturado', moisturePercent: number, pastRain48hMm: number, explanation: string }}
  */
 function classifySoilMoisture(volumetricMoisture, pastRain48hMm) {
   const moisturePct = Math.round(volumetricMoisture * 100);
@@ -47,20 +38,20 @@ function classifySoilMoisture(volumetricMoisture, pastRain48hMm) {
 }
 
 /**
- * Consulta la precipitación acumulada proyectada de las próximas 24 horas y los datos de suelo en el punto dado
+ * Consulta la precipitación acumulada proyectada de las próximas 24 horas,
+ * los datos de suelo en el punto dado, y el pronóstico horario detallado.
  * 
  * @param {number} latitude 
  * @param {number} longitude 
- * @param {number|null} simulatedRainMm - Opcional para simular qué pasaría si llueve cierta cantidad
- * @returns {Promise<{ rain24hMm: number, hourlyForecast: Array<any>, soilData: any, source: string }>}
+ * @param {number|null} simulatedRainMm
+ * @returns {Promise<{ rain24hMm, forecast6h, forecast12h, forecast24h, hourlyForecast, soilData, source }>}
  */
 async function getProjectedPrecipitation24h(latitude, longitude, simulatedRainMm = null) {
   if (typeof latitude !== 'number' || typeof longitude !== 'number') {
     throw new Error('Coordenadas inválidas para la consulta climática.');
   }
 
-  // URL de Open-Meteo solicitando lluvia pronosticada a 24h, lluvia pasada de 48h y humedad de suelo a diferentes estratos
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=precipitation,soil_moisture_0_to_1cm,soil_moisture_1_to_3cm,soil_moisture_3_to_9cm&past_days=2&forecast_days=2&timezone=auto`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=precipitation,precipitation_probability,soil_moisture_0_to_1cm,soil_moisture_1_to_3cm,soil_moisture_3_to_9cm&past_days=2&forecast_days=2&timezone=auto`;
 
   try {
     const controller = new AbortController();
@@ -81,6 +72,7 @@ async function getProjectedPrecipitation24h(latitude, longitude, simulatedRainMm
 
     const times = data.hourly.time || [];
     const precips = data.hourly.precipitation || [];
+    const probs = data.hourly.precipitation_probability || [];
     const sm01 = data.hourly.soil_moisture_0_to_1cm || [];
     const sm13 = data.hourly.soil_moisture_1_to_3cm || [];
     const sm39 = data.hourly.soil_moisture_3_to_9cm || [];
@@ -89,14 +81,14 @@ async function getProjectedPrecipitation24h(latitude, longitude, simulatedRainMm
     const nowIso = new Date().toISOString().slice(0, 13);
     let currentIndex = times.findIndex(t => t.startsWith(nowIso));
     if (currentIndex === -1) {
-      currentIndex = Math.min(48, times.length - 1); // 48 horas pasadas
+      currentIndex = Math.min(48, times.length - 1);
     }
 
-    // 1. Calcular Lluvias Pasadas de las últimas 48 horas (índice 0 hasta currentIndex)
+    // 1. Lluvias pasadas de las últimas 48 horas
     const past48hPrecips = precips.slice(Math.max(0, currentIndex - 48), currentIndex);
     const pastRain48hSum = past48hPrecips.reduce((sum, val) => sum + (Number(val) || 0), 0);
 
-    // 2. Obtener Humedad de Suelo Actual (promedio ponderado de los estratos superficiales 0-9 cm)
+    // 2. Humedad de suelo actual (promedio ponderado de los estratos superficiales 0-9 cm)
     const currentSm01 = Number(sm01[currentIndex] ?? sm01[0] ?? 0.22);
     const currentSm13 = Number(sm13[currentIndex] ?? sm13[0] ?? 0.23);
     const currentSm39 = Number(sm39[currentIndex] ?? sm39[0] ?? 0.24);
@@ -105,25 +97,49 @@ async function getProjectedPrecipitation24h(latitude, longitude, simulatedRainMm
     // Clasificar automáticamente el suelo
     const soilData = classifySoilMoisture(averageMoisture, pastRain48hSum);
 
-    // 3. Pronóstico de las Próximas 24 horas (desde currentIndex hasta currentIndex + 24)
+    // 3. Pronóstico detallado de las próximas 24 horas con probabilidad de lluvia
     const next24hPrecips = precips.slice(currentIndex, currentIndex + 24);
     const next24hTimes = times.slice(currentIndex, currentIndex + 24);
+    const next24hProbs = probs.slice(currentIndex, currentIndex + 24);
+
+    // Acumulados por ventana temporal
+    const forecast6h = Number(
+      next24hPrecips.slice(0, 6).reduce((s, v) => s + (Number(v) || 0), 0).toFixed(1)
+    );
+    const forecast12h = Number(
+      next24hPrecips.slice(0, 12).reduce((s, v) => s + (Number(v) || 0), 0).toFixed(1)
+    );
+    const forecast24h = Number(
+      next24hPrecips.reduce((s, v) => s + (Number(v) || 0), 0).toFixed(1)
+    );
+
+    // Máxima probabilidad de lluvia en las próximas 6h, 12h y 24h
+    const maxProb6h = Math.max(...(next24hProbs.slice(0, 6).map(Number) || [0]));
+    const maxProb12h = Math.max(...(next24hProbs.slice(0, 12).map(Number) || [0]));
+    const maxProb24h = Math.max(...(next24hProbs.map(Number) || [0]));
 
     let rain24hMm;
     if (simulatedRainMm !== null && simulatedRainMm !== undefined && !isNaN(Number(simulatedRainMm))) {
       rain24hMm = Number(Number(simulatedRainMm).toFixed(1));
     } else {
-      const forecastSum = next24hPrecips.reduce((sum, val) => sum + (Number(val) || 0), 0);
-      rain24hMm = Number(forecastSum.toFixed(1));
+      rain24hMm = forecast24h;
     }
 
+    // Pronóstico horario con precipitación y probabilidad
     const hourlyForecast = next24hTimes.map((time, idx) => ({
       time,
-      precipitation: Number((next24hPrecips[idx] || 0).toFixed(1))
+      precipitation: Number((next24hPrecips[idx] || 0).toFixed(1)),
+      probability: Math.round(Number(next24hProbs[idx] || 0))
     }));
 
     return {
       rain24hMm,
+      forecast6h,
+      forecast12h,
+      forecast24h,
+      maxProb6h: Math.round(maxProb6h),
+      maxProb12h: Math.round(maxProb12h),
+      maxProb24h: Math.round(maxProb24h),
       hourlyForecast,
       soilData,
       isSimulatedRain: simulatedRainMm !== null && simulatedRainMm !== undefined,
@@ -131,11 +147,15 @@ async function getProjectedPrecipitation24h(latitude, longitude, simulatedRainMm
     };
   } catch (error) {
     console.warn(`Aviso en Open-Meteo para [${latitude}, ${longitude}], aplicando valores seguros:`, error.message);
-    
-    // Valores de respaldo razonables en caso de caída temporal de red
+
     const fallbackSoil = classifySoilMoisture(0.24, 2.5);
     return {
       rain24hMm: simulatedRainMm !== null ? Number(Number(simulatedRainMm).toFixed(1)) : 0.0,
+      forecast6h: 0,
+      forecast12h: 0,
+      forecast24h: 0,
+      maxProb6h: 0,
+      maxProb12h: 0,
       hourlyForecast: [],
       soilData: fallbackSoil,
       isSimulatedRain: simulatedRainMm !== null,

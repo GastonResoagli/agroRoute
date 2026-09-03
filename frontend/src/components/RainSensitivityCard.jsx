@@ -165,10 +165,6 @@ export default function RainSensitivityCard({
           </span>
         </div>
 
-        <p className="text-xs leading-relaxed opacity-90 mb-2.5">
-          {impact.description}
-        </p>
-
         {/* Resumen por tipo de calzada */}
         <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-current/10">
           <div className="bg-white/80 p-2 rounded border border-current/10">

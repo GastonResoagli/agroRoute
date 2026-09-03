@@ -13,16 +13,18 @@ const DEFAULT_USER_ROLE = process.env.DEFAULT_USER_ROLE || 'producer';
 
 /**
  * Controlador de análisis de transitabilidad de rutas
- * Incorpora detección y clasificación automática del suelo desde Open-Meteo
+ * Incorpora detección de rutas reales (RN 12, etc.), clasificación de calzadas
+ * y soporte para calibración manual de superficie por ruta si el productor lo solicita.
  */
 async function analyzeRoutes(req, res) {
   try {
     const {
       origin,
       destination,
-      soil_state = 'auto', // Por defecto 'auto': captura y clasifica desde Open-Meteo
+      soil_state = 'auto',
       cargo_type = 'general',
       simulated_rain_mm = null,
+      surface_overrides = {}, // Permite al productor calibrar la superficie de una ruta específica
       user_id = DEFAULT_USER_ID,
       user_role = DEFAULT_USER_ROLE
     } = req.body;
@@ -51,7 +53,6 @@ async function analyzeRoutes(req, res) {
       });
     }
 
-    // Si se pasa un estado explícito que no sea 'auto', validarlo
     if (soil_state !== 'auto' && !VALID_SOIL_STATES.includes(soil_state)) {
       return res.status(400).json({
         success: false,
@@ -59,45 +60,68 @@ async function analyzeRoutes(req, res) {
       });
     }
 
-    // 2. Obtener rutas desde OSRM (Ruta principal y alternativas locales en Corrientes)
+    // 2. Obtener rutas desde OSRM con detección de rutas reales (RN 12, etc.)
     const rawRoutes = await getRoutes(origin, destination);
 
     // 3. Evaluar cada ruta individualmente
     const assessedRoutes = [];
     let detectedSoilGlobal = null;
+    let weatherForecastGlobal = null; // pronóstico detallado para mostrar en el panel
 
     for (const route of rawRoutes) {
       // BR-006, BR-037: Calcular el punto medio exacto del trayecto
       const midpoint = calculateRouteMidpoint(route.geometry.coordinates);
 
-      // BR-005, BR-025, BR-036: Consultar precipitación y humedad de suelo en el punto medio
+      // BR-005, BR-025, BR-036: Consultar precipitación y telemetría de suelo en el punto medio
       const weather = await getProjectedPrecipitation24h(
         midpoint.lat,
         midpoint.lon,
         simulated_rain_mm
       );
 
-      // Si no tenemos suelo global aún, tomamos el del punto medio de la ruta principal
       if (!detectedSoilGlobal) {
         detectedSoilGlobal = weather.soilData;
+        // Guardar el pronóstico completo del primer trayecto (punto medio representativo)
+        weatherForecastGlobal = {
+          forecast6h: weather.forecast6h,
+          forecast12h: weather.forecast12h,
+          forecast24h: weather.forecast24h,
+          maxProb6h: weather.maxProb6h,
+          maxProb12h: weather.maxProb12h,
+          maxProb24h: weather.maxProb24h,
+          hourlyForecast: weather.hourlyForecast
+        };
       }
 
-      // Determinar estado final del suelo: clasificado automáticamente o manual si se indicó explícitamente
       const effectiveSoilState = soil_state === 'auto' ? weather.soilData.state : soil_state;
+
+      // Superficie efectiva: usar override manual si el usuario la ajustó, sino la detectada fehacientemente
+      const effectiveSurfaceType = surface_overrides[route.routeIndex] || route.surfaceType;
+
+      // Ajustar nombre si la superficie fue forzada manualmente
+      let effectiveName = route.name;
+      if (surface_overrides[route.routeIndex]) {
+        const surfLabel = effectiveSurfaceType === 'asfalto_ripio' ? 'Asfalto' : 'Calzada de Tierra';
+        effectiveName = `${route.name.split('(')[0].trim()} (${surfLabel})`;
+      }
 
       // Evaluar riesgo determinista según reglas de negocio
       const risk = evaluateRouteRisk({
         routeType: route.routeType,
-        surfaceType: route.surfaceType,
+        surfaceType: effectiveSurfaceType,
         soilState: effectiveSoilState,
         rain24hMm: weather.rain24hMm
       });
 
       assessedRoutes.push({
         routeIndex: route.routeIndex,
-        name: route.name,
+        name: effectiveName,
         routeType: route.routeType,
-        surfaceType: route.surfaceType,
+        surfaceType: effectiveSurfaceType,
+        detectedSurfaceType: route.surfaceType,
+        majorRoads: route.majorRoads,
+        hasNationalRoute: route.hasNationalRoute,
+        pavedPercentage: route.pavedPercentage,
         distanceKm: route.distanceKm,
         durationMin: route.durationMin,
         geometry: route.geometry,
@@ -122,7 +146,6 @@ async function analyzeRoutes(req, res) {
 
     // 4. Seleccionar la ruta recomendada priorizando seguridad (BR-018, BR-027, BR-056)
     const selection = selectRecommendedRoute(assessedRoutes);
-
     const effectiveGlobalSoilState = soil_state === 'auto' ? detectedSoilGlobal?.state : soil_state;
 
     // 5. Persistencia en base de datos con contexto RLS
@@ -163,7 +186,7 @@ async function analyzeRoutes(req, res) {
         return reqRecord;
       });
     } catch (dbErr) {
-      console.warn('Aviso de persistencia (no bloqueante para la respuesta):', dbErr.message);
+      console.warn('Aviso de persistencia:', dbErr.message);
     }
 
     return res.json({
@@ -174,6 +197,7 @@ async function analyzeRoutes(req, res) {
       soilState: effectiveGlobalSoilState,
       soilSource: soil_state === 'auto' ? 'automatic_open_meteo' : 'manual_override',
       soilTelemetry: detectedSoilGlobal,
+      weatherForecast: weatherForecastGlobal,
       cargoType: cargo_type,
       simulatedRain: simulated_rain_mm !== null,
       simulatedRainMm: simulated_rain_mm,

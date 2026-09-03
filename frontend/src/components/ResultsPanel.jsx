@@ -9,6 +9,7 @@ export default function ResultsPanel({
   alertMessage, 
   selectedRouteIndex, 
   onSelectRoute,
+  onUpdateSurface,
   currentRainForecast = 0,
   simulatedRain,
   onSimulateRain,
@@ -20,7 +21,7 @@ export default function ResultsPanel({
         <Route className="w-12 h-12 text-slate-300 mx-auto mb-3" />
         <h3 className="font-bold text-slate-700 text-base">Esperando análisis de transitabilidad</h3>
         <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-          Selecciona un origen y destino en Corrientes. El sistema capturará automáticamente el clima y estado del suelo para evaluar las rutas.
+          Selecciona un origen y destino en Corrientes. El sistema identificará las rutas reales (RN 12, RP, etc.), el suelo y las precipitaciones.
         </p>
       </div>
     );
@@ -92,6 +93,7 @@ export default function ResultsPanel({
             route={route}
             isSelected={selectedRouteIndex === route.routeIndex}
             onSelect={() => onSelectRoute(route.routeIndex)}
+            onUpdateSurface={onUpdateSurface}
           />
         ))}
       </div>
