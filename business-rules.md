@@ -18,8 +18,8 @@ Estas reglas se derivan exclusivamente de `prompt.md`. Describen una solución q
 - **BR-010 — Rutas alternativas:** Las rutas alternativas deben considerarse caminos secundarios.
 - **BR-011 — Superficie asumida para alternativas:** Los caminos secundarios deben considerarse de tierra.
 - **BR-012 — Riesgo en camino secundario seco:** Un camino secundario con suelo Seco debe clasificarse con riesgo bajo.
-- **BR-013 — Riesgo en camino secundario húmedo:** Un camino secundario con suelo Húmedo y lluvia proyectada superior a 10 mm debe clasificarse con riesgo alto.
-- **BR-014 — Porcentaje de riesgo alto:** El riesgo alto definido para un camino secundario con suelo Húmedo y lluvia superior a 10 mm debe expresarse como 80%.
+- **BR-013 — Riesgo en camino secundario húmedo:** Un camino secundario con suelo Húmedo y lluvia proyectada superior a 15 mm debe clasificarse con riesgo alto.
+- **BR-014 — Porcentaje de riesgo alto:** El riesgo alto definido para un camino secundario con suelo Húmedo y lluvia superior a 15 mm debe expresarse como 80%.
 - **BR-015 — Riesgo crítico por lluvia:** Cuando la lluvia proyectada supere los 30 mm, la ruta debe clasificarse con riesgo crítico.
 - **BR-016 — Porcentaje de riesgo crítico:** El riesgo crítico producido por lluvia superior a 30 mm debe expresarse como 100%.
 - **BR-017 — Intransitabilidad:** Una ruta con riesgo crítico debe considerarse intransitable.
